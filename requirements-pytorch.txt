@@ -1,0 +1,38 @@
+# Requirements pour Python 3.12+ (avec PyTorch uniquement)
+# TensorFlow n'est pas encore compatible avec Python 3.12+
+
+# Core ML libraries
+numpy>=1.24.0,<2.0.0
+pandas>=2.0.0
+scikit-learn>=1.3.0
+
+# Deep Learning - PyTorch (compatible Python 3.14)
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# NLP libraries
+nltk>=3.8.0
+transformers>=4.35.0
+
+# Text processing
+regex>=2023.10.0
+beautifulsoup4>=4.12.0
+
+# Embeddings (optional)
+gensim>=4.3.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.13.0
+
+# Utilities
+tqdm>=4.66.0
+python-dotenv>=1.0.0
+
+# Jupyter (optional for experimentation)
+jupyter>=1.0.0
+ipykernel>=6.25.0
+
+# Progress bars
+tensorboard>=2.14.0

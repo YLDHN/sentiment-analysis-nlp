@@ -1,0 +1,5 @@
+timestamp,text,predicted_label,correct_label,user_explanation
+2025-11-20T16:29:06.608469,tu es beau,négatif,positif,je lui dis qu il est beau c'est un compliments
+2025-11-20T16:35:38.018078,tu es beau,négatif,positif,je lui dit qu il est beau ca doit etre un compliment 
+2025-11-20T16:35:39.633978,tu es beau,négatif,positif,je lui dit qu il est beau ca doit etre un compliment 
+2025-11-20T16:35:51.501667,tu es beau,positif,positif,Correct

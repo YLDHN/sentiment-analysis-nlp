@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Analyse de Sentiment - NLP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-section label {
+            display: block;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        #textInput {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        #textInput:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-examples {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-examples:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(245, 87, 108, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .result-card {
+            margin-top: 30px;
+            padding: 30px;
+            border-radius: 15px;
+            animation: slideIn 0.5s ease;
+        }
+
+        .result-card.positif {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+        }
+
+        .result-card.negatif {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .result-card.neutre {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        }
+
+        .result-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .sentiment-emoji {
+            font-size: 4em;
+            margin-bottom: 10px;
+        }
+
+        .sentiment-label {
+            font-size: 2em;
+            font-weight: 700;
+            color: #333;
+            text-transform: uppercase;
+        }
+
+        .confidence {
+            font-size: 1.2em;
+            color: #555;
+            margin-top: 5px;
+        }
+
+        .probabilities {
+            margin-top: 25px;
+        }
+
+        .prob-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .prob-bar {
+            margin-bottom: 15px;
+        }
+
+        .prob-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .prob-track {
+            height: 30px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .prob-fill {
+            height: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            transition: width 0.6s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-weight: 600;
+        }
+
+        .examples-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .examples-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .example-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .example-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .example-item:hover {
+            background: #e9ecef;
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .example-text {
+            font-size: 0.95em;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .example-sentiment {
+            font-size: 1.2em;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            opacity: 0.8;
+        }
+
+        .feedback-section {
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 2px solid rgba(0,0,0,0.1);
+        }
+
+        .feedback-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .feedback-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .btn-feedback {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 1em;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-correct {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-correct:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-incorrect {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-incorrect:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .correction-form {
+            background: rgba(255,255,255,0.5);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .correction-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .sentiment-options {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .sentiment-option {
+            flex: 1;
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-weight: 500;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .sentiment-option:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .sentiment-option input[type="radio"] {
+            margin: 0;
+        }
+
+        .explanation-input {
+            margin-bottom: 15px;
+        }
+
+        .explanation-input label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .explanation-input textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: inherit;
+            resize: vertical;
+        }
+
+        .correction-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-submit {
+            flex: 1;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-submit:hover {
+            background: #5568d3;
+        }
+
+        .btn-cancel {
+            flex: 1;
+            padding: 10px 20px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-cancel:hover {
+            background: #5a6268;
+        }
+
+        .feedback-message {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .feedback-message.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .feedback-message.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .main-card {
+                padding: 20px;
+            }
+
+            .feedback-buttons,
+            .sentiment-options {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Analyse de Sentiment</h1>
+            <p>Analysez le sentiment de vos textes en temps réel avec PyTorch</p>
+        </div>
+
+        <div class="main-card">
+            <div class="input-section">
+                <label for="textInput">✍️ Entrez votre texte :</label>
+                <textarea 
+                    id="textInput" 
+                    placeholder="Exemple: Ce film est absolument génial! J'ai adoré chaque minute."
+                    autofocus
+                ></textarea>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-primary" onclick="analyzeText()">
+                    🔍 Analyser
+                </button>
+                <button class="btn-secondary" onclick="clearText()">
+                    🗑️ Effacer
+                </button>
+                <button class="btn-examples" onclick="loadExamples()">
+                    💡 Exemples
+                </button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px; color: #666;">Analyse en cours...</p>
+            </div>
+
+            <div class="error" id="error"></div>
+
+            <div id="result"></div>
+
+            <div class="examples-section hidden" id="examplesSection">
+                <h3 class="examples-title">📚 Exemples à tester :</h3>
+                <div class="example-grid" id="exampleGrid"></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🧠 Propulsé par PyTorch 2.9.1 | 🚀 Python 3.14 | ⚡ Apple Silicon MPS</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">Projet NLP - Novembre 2025</p>
+        </div>
+    </div>
+
+    <script>
+        const emojiMap = {
+            'positif': '😊',
+            'negatif': '😞',
+            'neutre': '😐'
+        };
+
+        async function analyzeText() {
+            const text = document.getElementById('textInput').value.trim();
+            
+            if (!text) {
+                showError('Veuillez entrer un texte à analyser');
+                return;
+            }
+
+            // Afficher le loading
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('error').classList.remove('active');
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    showError(data.error);
+                } else {
+                    displayResult(data);
+                }
+            } catch (error) {
+                showError('Erreur lors de l\'analyse: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+            }
+        }
+
+        function displayResult(data) {
+            const sentiment = data.prediction;
+            const emoji = emojiMap[sentiment];
+            const confidence = data.confidence.toFixed(1);
+            const probs = data.probabilities;
+
+            const html = `
+                <div class="result-card ${sentiment}">
+                    <div class="result-header">
+                        <div class="sentiment-emoji">${emoji}</div>
+                        <div class="sentiment-label">${sentiment}</div>
+                        <div class="confidence">Confiance: ${confidence}%</div>
+                    </div>
+
+                    <div class="probabilities">
+                        <div class="prob-title">📊 Probabilités détaillées :</div>
+                        
+                        <div class="prob-bar">
+                            <div class="prob-label">
+                                <span>😊 Positif</span>
+                                <span>${probs.positif.toFixed(1)}%</span>
+                            </div>
+                            <div class="prob-track">
+                                <div class="prob-fill" style="width: ${probs.positif}%">
+                                    ${probs.positif > 15 ? probs.positif.toFixed(0) + '%' : ''}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="prob-bar">
+                            <div class="prob-label">
+                                <span>😞 Négatif</span>
+                                <span>${probs.negatif.toFixed(1)}%</span>
+                            </div>
+                            <div class="prob-track">
+                                <div class="prob-fill" style="width: ${probs.negatif}%">
+                                    ${probs.negatif > 15 ? probs.negatif.toFixed(0) + '%' : ''}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="prob-bar">
+                            <div class="prob-label">
+                                <span>😐 Neutre</span>
+                                <span>${probs.neutre.toFixed(1)}%</span>
+                            </div>
+                            <div class="prob-track">
+                                <div class="prob-fill" style="width: ${probs.neutre}%">
+                                    ${probs.neutre > 15 ? probs.neutre.toFixed(0) + '%' : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="feedback-section">
+                        <div class="feedback-title">Cette prédiction est-elle correcte ?</div>
+                        <div class="feedback-buttons">
+                            <button class="btn-feedback btn-correct" onclick="handleFeedback('${data.text.replace(/'/g, "\\'")}', '${sentiment}', true)">
+                                ✅ Oui, c'est correct
+                            </button>
+                            <button class="btn-feedback btn-incorrect" onclick="showCorrectionForm('${data.text.replace(/'/g, "\\'")}', '${sentiment}')">
+                                ❌ Non, c'est faux
+                            </button>
+                        </div>
+                        <div class="correction-form hidden" id="correctionForm">
+                            <div class="correction-title">Quelle est la vraie sentiment ?</div>
+                            <div class="sentiment-options">
+                                <label class="sentiment-option">
+                                    <input type="radio" name="correctSentiment" value="positif">
+                                    <span>😊 Positif</span>
+                                </label>
+                                <label class="sentiment-option">
+                                    <input type="radio" name="correctSentiment" value="negatif">
+                                    <span>😞 Négatif</span>
+                                </label>
+                                <label class="sentiment-option">
+                                    <input type="radio" name="correctSentiment" value="neutre">
+                                    <span>😐 Neutre</span>
+                                </label>
+                            </div>
+                            <div class="explanation-input">
+                                <label>💬 Pourquoi ? (optionnel)</label>
+                                <textarea id="explanationText" placeholder="Expliquez pourquoi la prédiction est incorrecte..." rows="3"></textarea>
+                            </div>
+                            <div class="correction-buttons">
+                                <button class="btn-submit" onclick="submitCorrection('${data.text.replace(/'/g, "\\'")}', '${sentiment}')">
+                                    Envoyer la correction
+                                </button>
+                                <button class="btn-cancel" onclick="hideCorrectionForm()">
+                                    Annuler
+                                </button>
+                            </div>
+                        </div>
+                        <div class="feedback-message hidden" id="feedbackMessage"></div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('result').innerHTML = html;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = '❌ ' + message;
+            errorDiv.classList.add('active');
+        }
+
+        function clearText() {
+            document.getElementById('textInput').value = '';
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('error').classList.remove('active');
+            document.getElementById('textInput').focus();
+        }
+
+        async function loadExamples() {
+            const examplesSection = document.getElementById('examplesSection');
+            
+            if (!examplesSection.classList.contains('hidden')) {
+                examplesSection.classList.add('hidden');
+                return;
+            }
+
+            try {
+                const response = await fetch('/examples');
+                const data = await response.json();
+
+                const grid = document.getElementById('exampleGrid');
+                grid.innerHTML = '';
+
+                data.examples.forEach(example => {
+                    const emoji = emojiMap[example.prediction];
+                    const div = document.createElement('div');
+                    div.className = 'example-item';
+                    div.innerHTML = `
+                        <div class="example-text">"${example.text.substring(0, 60)}${example.text.length > 60 ? '...' : ''}"</div>
+                        <div class="example-sentiment">${emoji} ${example.prediction} (${example.confidence.toFixed(0)}%)</div>
+                    `;
+                    div.onclick = () => {
+                        document.getElementById('textInput').value = example.text;
+                        analyzeText();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    };
+                    grid.appendChild(div);
+                });
+
+                examplesSection.classList.remove('hidden');
+            } catch (error) {
+                showError('Erreur lors du chargement des exemples: ' + error.message);
+            }
+        }
+
+        // Analyser avec Enter (Ctrl+Enter)
+        document.getElementById('textInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                analyzeText();
+            }
+        });
+
+        // Charger les exemples au démarrage
+        window.addEventListener('load', function() {
+            console.log('✅ Application chargée');
+        });
+
+        // Fonctions de feedback
+        async function handleFeedback(text, predicted, isCorrect) {
+            try {
+                const response = await fetch('/feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        predicted: predicted,
+                        correct: isCorrect,
+                        user_label: predicted,
+                        explanation: ''
+                    })
+                });
+
+                const data = await response.json();
+                
+                const messageDiv = document.getElementById('feedbackMessage');
+                messageDiv.textContent = '✅ ' + data.message + ' (Total corrections: ' + data.feedback_count + ')';
+                messageDiv.className = 'feedback-message success';
+                messageDiv.classList.remove('hidden');
+
+                // Cacher les boutons de feedback
+                document.querySelector('.feedback-buttons').style.display = 'none';
+
+                setTimeout(() => {
+                    messageDiv.classList.add('hidden');
+                }, 5000);
+
+            } catch (error) {
+                const messageDiv = document.getElementById('feedbackMessage');
+                messageDiv.textContent = '❌ Erreur lors de l\'envoi du feedback';
+                messageDiv.className = 'feedback-message error';
+                messageDiv.classList.remove('hidden');
+            }
+        }
+
+        function showCorrectionForm(text, predicted) {
+            document.getElementById('correctionForm').classList.remove('hidden');
+            document.querySelector('.feedback-buttons').style.display = 'none';
+        }
+
+        function hideCorrectionForm() {
+            document.getElementById('correctionForm').classList.add('hidden');
+            document.querySelector('.feedback-buttons').style.display = 'flex';
+            document.getElementById('explanationText').value = '';
+            document.querySelectorAll('input[name="correctSentiment"]').forEach(radio => {
+                radio.checked = false;
+            });
+        }
+
+        async function submitCorrection(text, predicted) {
+            const selectedSentiment = document.querySelector('input[name="correctSentiment"]:checked');
+            
+            if (!selectedSentiment) {
+                alert('Veuillez sélectionner le bon sentiment');
+                return;
+            }
+
+            const userLabel = selectedSentiment.value;
+            const explanation = document.getElementById('explanationText').value;
+
+            try {
+                const response = await fetch('/feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        predicted: predicted,
+                        correct: false,
+                        user_label: userLabel,
+                        explanation: explanation || 'Pas d\'explication fournie'
+                    })
+                });
+
+                const data = await response.json();
+                
+                const messageDiv = document.getElementById('feedbackMessage');
+                messageDiv.textContent = '✅ ' + data.message + ' Le modèle apprendra de cette correction! (Total: ' + data.feedback_count + ')';
+                messageDiv.className = 'feedback-message success';
+                messageDiv.classList.remove('hidden');
+
+                // Cacher le formulaire
+                document.getElementById('correctionForm').classList.add('hidden');
+                document.querySelector('.feedback-buttons').style.display = 'none';
+
+                setTimeout(() => {
+                    messageDiv.classList.add('hidden');
+                }, 7000);
+
+            } catch (error) {
+                const messageDiv = document.getElementById('feedbackMessage');
+                messageDiv.textContent = '❌ Erreur lors de l\'envoi de la correction';
+                messageDiv.className = 'feedback-message error';
+                messageDiv.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
