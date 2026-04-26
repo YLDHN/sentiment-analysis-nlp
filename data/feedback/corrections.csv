@@ -3,3 +3,10 @@ timestamp,text,predicted_label,correct_label,user_explanation
 2025-11-20T16:35:38.018078,tu es beau,négatif,positif,je lui dit qu il est beau ca doit etre un compliment 
 2025-11-20T16:35:39.633978,tu es beau,négatif,positif,je lui dit qu il est beau ca doit etre un compliment 
 2025-11-20T16:35:51.501667,tu es beau,positif,positif,Correct
+2026-04-26T16:40:29.553749,bonjour,négatif,neutre,Pas d'explication fournie
+2026-04-26T16:40:51.401517,bonjour,négatif,neutre,Pas d'explication fournie
+2026-04-26T16:41:21.699835,connard,neutre,negatif,Pas d'explication fournie
+2026-04-26T16:41:32.600430,connard,positif,negatif,Pas d'explication fournie
+2026-04-26T16:41:38.571711,connard,négatif,négatif,Correct
+2026-04-26T16:41:41.332244,connard,négatif,négatif,Correct
+2026-04-26T16:54:42.237970,connard,positif,negatif,Pas d'explication fournie

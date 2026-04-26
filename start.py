@@ -47,13 +47,20 @@ def check_venv():
 
 def check_dependencies():
     """Vérifie les dépendances"""
-    required = ['torch', 'flask', 'pandas', 'numpy', 'scikit-learn']
+    # Package names and their Python import names are not always identical.
+    required = {
+        'torch': 'torch',
+        'flask': 'flask',
+        'pandas': 'pandas',
+        'numpy': 'numpy',
+        'scikit-learn': 'sklearn',
+    }
     missing = []
     
     print("📦 Vérification des dépendances:")
-    for package in required:
+    for package, import_name in required.items():
         try:
-            __import__(package)
+            __import__(import_name)
             print(f"   ✅ {package}")
         except ImportError:
             print(f"   ❌ {package} (manquant)")

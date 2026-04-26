@@ -30,6 +30,7 @@ import seaborn as sns
 from collections import Counter
 import re
 import os
+import pickle
 
 # Configuration
 os.makedirs('models/pytorch_lstm', exist_ok=True)
@@ -51,11 +52,11 @@ print(f"\n🚀 Device: {device}")
 EMBEDDING_DIM = 128
 HIDDEN_DIM = 128
 NUM_LAYERS = 2
-DROPOUT = 0.5
-MAX_SEQ_LEN = 100
-BATCH_SIZE = 32
+DROPOUT = 0.3
+MAX_SEQ_LEN = 50
+BATCH_SIZE = 16
 LEARNING_RATE = 0.001
-EPOCHS = 4
+EPOCHS = 30
 
 print(f"\n📊 Hyperparamètres:")
 print(f"  - Embedding dim: {EMBEDDING_DIM}")
@@ -204,6 +205,18 @@ print(f"  - Taille du vocabulaire: {len(word_to_idx)}")
 print(f"\n  📝 Mots les plus fréquents:")
 for word, count in most_common[:10]:
     print(f"     - {word}: {count}")
+
+# Sauvegarder le vocabulaire/métadonnées pour l'application Flask
+vocab_data = {
+    'word_to_idx': word_to_idx,
+    'idx_to_word': idx_to_word,
+    'label_to_idx': {'neutre': 0, 'négatif': 1, 'positif': 2},
+    'idx_to_label': {0: 'neutre', 1: 'négatif', 2: 'positif'},
+    'max_seq_len': MAX_SEQ_LEN,
+}
+with open('models/pytorch_lstm/vocabulary.pkl', 'wb') as f:
+    pickle.dump(vocab_data, f)
+print("  ✅ Vocabulaire sauvegardé: models/pytorch_lstm/vocabulary.pkl")
 
 
 # ========================================
@@ -383,6 +396,8 @@ for epoch in range(EPOCHS):
     # Sauvegarder meilleur modèle
     if val_acc > best_val_acc:
         best_val_acc = val_acc
+        label_to_idx = {'neutre': 0, 'négatif': 1, 'positif': 2}
+        idx_to_label = {v: k for k, v in label_to_idx.items()}
         torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
@@ -391,6 +406,16 @@ for epoch in range(EPOCHS):
             'word_to_idx': word_to_idx,
             'idx_to_word': idx_to_word,
         }, 'models/pytorch_lstm/best_model.pth')
+        # Sauvegarder vocabulary.pkl séparé (requis par app.py)
+        vocab_data = {
+            'word_to_idx': word_to_idx,
+            'idx_to_word': idx_to_word,
+            'label_to_idx': label_to_idx,
+            'idx_to_label': idx_to_label,
+            'max_seq_len': MAX_SEQ_LEN,
+        }
+        with open('models/pytorch_lstm/vocabulary.pkl', 'wb') as f:
+            pickle.dump(vocab_data, f)
         print(f"  ✅ Meilleur modèle sauvegardé! (val_acc: {val_acc:.2f}%)")
 
 

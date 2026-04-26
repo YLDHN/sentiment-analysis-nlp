@@ -58,6 +58,7 @@ class SentimentModel:
         self.device = self._get_device()
         self.model = None
         self.vocab_data = None
+        self.vocab_size = 0
         self.load_model()
     
     def _get_device(self):
@@ -78,13 +79,61 @@ class SentimentModel:
             print("💡 Entraînez d'abord avec: python train_pytorch_simple.py")
             return
         
-        # Charger vocabulaire
-        with open(vocab_path, 'rb') as f:
-            self.vocab_data = pickle.load(f)
-        
         # Charger modèle
         checkpoint = torch.load(model_path, map_location=self.device)
-        vocab_size = len(self.vocab_data['word_to_idx'])
+
+        # Charger vocabulaire si disponible, puis prioriser les métadonnées du checkpoint
+        # pour éviter les incompatibilités entre embeddings et vocabulaire.
+        self.vocab_data = {}
+        if os.path.exists(vocab_path):
+            with open(vocab_path, 'rb') as f:
+                self.vocab_data = pickle.load(f)
+
+        if checkpoint.get('word_to_idx'):
+            self.vocab_data['word_to_idx'] = checkpoint['word_to_idx']
+            self.vocab_data['idx_to_word'] = checkpoint.get(
+                'idx_to_word',
+                {idx: word for word, idx in checkpoint['word_to_idx'].items()}
+            )
+
+        if 'word_to_idx' not in self.vocab_data:
+            raise RuntimeError(
+                "Vocabulaire introuvable dans vocabulary.pkl et dans le checkpoint."
+            )
+
+        self.vocab_data.setdefault('max_seq_len', 100)
+        self.vocab_data.setdefault('label_to_idx', {'neutre': 0, 'négatif': 1, 'positif': 2})
+        self.vocab_data.setdefault('idx_to_label', {0: 'neutre', 1: 'négatif', 2: 'positif'})
+
+        state_dict = checkpoint.get('model_state_dict', {})
+        if 'embedding.weight' in state_dict:
+            self.vocab_size = state_dict['embedding.weight'].shape[0]
+        else:
+            self.vocab_size = len(self.vocab_data['word_to_idx'])
+
+        # Évite les indices hors borne si le vocabulary.pkl est plus grand que le checkpoint.
+        unk_idx = self.vocab_data['word_to_idx'].get('<UNK>', 1)
+        filtered_word_to_idx = {
+            word: idx
+            for word, idx in self.vocab_data['word_to_idx'].items()
+            if isinstance(idx, int) and 0 <= idx < self.vocab_size
+        }
+        filtered_word_to_idx.setdefault('<PAD>', 0)
+        if 0 <= unk_idx < self.vocab_size:
+            filtered_word_to_idx.setdefault('<UNK>', unk_idx)
+        else:
+            filtered_word_to_idx.setdefault('<UNK>', 1 if self.vocab_size > 1 else 0)
+
+        self.vocab_data['word_to_idx'] = filtered_word_to_idx
+        self.vocab_data['idx_to_word'] = {
+            idx: word for word, idx in self.vocab_data['word_to_idx'].items()
+        }
+
+        # Réécrit un vocabulary.pkl cohérent avec le checkpoint pour les prochains démarrages.
+        with open(vocab_path, 'wb') as f:
+            pickle.dump(self.vocab_data, f)
+
+        vocab_size = self.vocab_size
         
         self.model = SentimentLSTM(
             vocab_size=vocab_size,
@@ -117,10 +166,15 @@ class SentimentModel:
         """Convertit un texte en séquence"""
         max_len = self.vocab_data['max_seq_len']
         word_to_idx = self.vocab_data['word_to_idx']
+        unk_idx = word_to_idx.get("<UNK>", 1 if self.vocab_size > 1 else 0)
         
         cleaned = self.clean_text(text)
         words = cleaned.split()
-        sequence = [word_to_idx.get(word, word_to_idx.get("<UNK>", 1)) for word in words]
+        sequence = [
+            word_to_idx.get(word, unk_idx)
+            if word_to_idx.get(word, unk_idx) < self.vocab_size else unk_idx
+            for word in words
+        ]
         
         if len(sequence) < max_len:
             sequence = sequence + [0] * (max_len - len(sequence))
@@ -226,14 +280,9 @@ def feedback():
             explanation if not correct else 'Correct'
         ])
     
-    # 🔥 APPRENTISSAGE IMMÉDIAT : Ajuster le modèle avec cette nouvelle donnée
     if not correct and user_label:
-        try:
-            retrain_on_feedback(text, user_label)
-            message = f'✅ Correction enregistrée ET apprise ! Le modèle ne fera plus cette erreur.'
-        except Exception as e:
-            print(f"⚠️ Erreur réentraînement: {e}")
-            message = 'Correction enregistrée (réentraînement échoué)'
+        retrain_on_feedback(text, user_label)
+        message = '✅ Correction enregistrée ! Elle sera prise en compte au prochain réentraînement.'
     else:
         message = 'Merci pour votre feedback!'
     
@@ -253,54 +302,10 @@ def feedback():
 
 
 def retrain_on_feedback(text, correct_label):
-    """Réentraîne le modèle avec une correction utilisateur"""
-    label_to_idx = sentiment_model.vocab_data.get('label_to_idx', {'neutre': 0, 'négatif': 1, 'positif': 2})
-    
-    # Convertir le label
-    if correct_label.lower() not in label_to_idx:
-        # Mapper les variations
-        label_map = {
-            'positif': 'positif', 'positive': 'positif', '😊 positif': 'positif',
-            'négatif': 'négatif', 'negatif': 'négatif', 'negative': 'négatif', '😢 négatif': 'négatif',
-            'neutre': 'neutre', 'neutral': 'neutre', '😐 neutre': 'neutre'
-        }
-        correct_label = label_map.get(correct_label.lower(), 'neutre')
-    else:
-        correct_label = correct_label.lower()
-    
-    label_idx = label_to_idx[correct_label]
-    
-    # Préparer les données
-    sequence = sentiment_model.text_to_sequence(text)
-    x_tensor = torch.LongTensor([sequence]).to(sentiment_model.device)
-    y_tensor = torch.LongTensor([label_idx]).to(sentiment_model.device)
-    
-    # Mettre le modèle en mode entraînement
-    sentiment_model.model.train()
-    
-    # Créer l'optimiseur
-    optimizer = torch.optim.Adam(sentiment_model.model.parameters(), lr=0.0001)
-    criterion = nn.CrossEntropyLoss()
-    
-    # Faire 5 itérations d'apprentissage sur cette correction
-    for _ in range(5):
-        optimizer.zero_grad()
-        outputs = sentiment_model.model(x_tensor)
-        loss = criterion(outputs, y_tensor)
-        loss.backward()
-        optimizer.step()
-    
-    # Remettre en mode évaluation
-    sentiment_model.model.eval()
-    
-    # Sauvegarder le modèle mis à jour
-    model_path = 'models/pytorch_lstm/best_model.pth'
-    torch.save({
-        'model_state_dict': sentiment_model.model.state_dict(),
-        'vocab_size': len(sentiment_model.vocab_data['word_to_idx']),
-    }, model_path)
-    
-    print(f"🎓 Modèle appris: '{text}' → {correct_label}")
+    """Enregistre la correction — le modèle est réentraîné depuis les données complètes via prepare_data.py + train_pytorch_simple.py"""
+    # Le fine-tuning sur un seul exemple détruisait les poids (catastrophic forgetting).
+    # Les corrections sont sauvegardées dans corrections.csv pour un réentraînement complet ultérieur.
+    print(f"💾 Correction enregistrée: '{text}' → {correct_label}")
 
 
 @app.route('/examples', methods=['GET'])
